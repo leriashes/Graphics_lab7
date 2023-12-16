@@ -66,21 +66,18 @@ namespace Graphics_lab7
             return img;
         }
 
-        private void Button1_Click(object sender, EventArgs e)
+        private void MakeBilinear() 
         {
-            coef = Convert.ToDouble(textBox1.Text);
-
             Bitmap imgStart = MakeImgWithBordersCopy(pictureBox1, 1);
 
             int halfsize = 25;
             int size = halfsize * 2;
             double hs = halfsize / coef;
-            double s = hs * 2;
 
 
             Bitmap imgRes = new Bitmap(Convert.ToInt32(Math.Round(pictureBox1.Image.Width * coef)), Convert.ToInt32(Math.Round(pictureBox1.Image.Height * coef)));
 
-            for (int i = 0; i < imgRes.Width; i++) 
+            for (int i = 0; i < imgRes.Width; i++)
             {
                 double x = (i * 2 + 1) * hs;
 
@@ -116,8 +113,6 @@ namespace Graphics_lab7
                     Color pixel21 = imgStart.GetPixel(si + 1, sj);
                     Color pixel22 = imgStart.GetPixel(si + 1, sj + 1);
 
-
-
                     int R, G, B;
 
                     double f1 = (sx + size - x) / size * pixel11.R + (x - sx) / size * pixel21.R;
@@ -145,7 +140,196 @@ namespace Graphics_lab7
             pictureBox2.Image = imgRes;
         }
 
-        private void открытьФайлToolStripMenuItem_Click(object sender, EventArgs e)
+        private void MakeBicubic()
+        {
+            Bitmap imgStart = MakeImgWithBordersCopy(pictureBox1, 2);
+
+            int halfsize = 25;
+            int size = halfsize * 2;
+            double hs = halfsize / coef;
+
+
+            Bitmap imgRes = new Bitmap(Convert.ToInt32(Math.Round(pictureBox1.Image.Width * coef)), Convert.ToInt32(Math.Round(pictureBox1.Image.Height * coef)));
+
+            for (int i = 0; i < imgRes.Width; i++)
+            {
+                double x = (i * 2 + 1) * hs;
+
+                int sx = Convert.ToInt32(Math.Truncate(x / halfsize));
+
+                //x = (x - Math.Floor(x)) / 2;
+
+                if (sx % 2 == 0)
+                {
+                    sx -= 1;
+                }
+
+                sx *= halfsize;
+
+                x = (x - sx) / size;
+
+                int si = (sx / halfsize + 1) / 2;
+
+                for (int j = 0; j < imgRes.Height; j++)
+                {
+                    double y = (j * 2 + 1) * hs;
+
+                    int sy = Convert.ToInt32(Math.Truncate(y / halfsize));
+
+                    //y = (y - Math.Floor(y)) / 2;
+
+                    if (sy % 2 == 0)
+                    {
+                        sy -= 1;
+                        //y += 0.5;
+                    }
+
+                    sy *= halfsize;
+
+                    y = (y - sy) / size;
+
+                    int sj = (sy / halfsize + 1) / 2;
+
+                    Color[] pixels = new Color[16];
+
+                    for (int n = 0; n < 4; n++)
+                    {
+                        for (int m = 0; m < 4; m++) 
+                        {
+                            pixels[n * 4 + m] = imgStart.GetPixel(si + n, sj + m);
+                        }
+                    }
+
+                    double R = 0, G = 0, B = 0;
+
+                    double[] b = new double[16];
+                    double sign = 1.0 / 4;
+
+                    for (int n = 0; n < 4; n++)
+                    {
+                        int d = 1;
+
+                        if (n % 3 == 0)
+                        {
+                            d *= 3;
+                        }
+
+                        for (int m = 0; m < 4; m++)
+                        {
+                            b[n * 4 + m] = sign / d;
+
+                            for (int l = -1; l <= 2; l++) 
+                            {
+                                if (l + 1 != n)
+                                {
+                                    b[n * 4 + m] *= x - l;
+                                }
+
+                                if (l + 1 != m)
+                                {
+                                    b[n * 4 + m] *= y - l;
+                                }
+                            }
+
+                            if (m % 3 == 0) 
+                            {
+                                b[n * 4 + m] /= 3;
+                            }
+
+                            sign *= -1;
+                        }
+
+                        sign *= -1;
+                    }
+
+                    //b[5] = (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y - 2) * (y + 1) / 4;
+                    //b[6] = x * (x + 1) * (x - 2) * (y - 1) * (y - 2) * (y + 1) / (-4);
+                    //b[9] = y * (x - 1) * (x - 2) * (x + 1) * (y + 1) * (y - 2) / (-4);
+                    //b[10] = x * y * (x + 1) * (x - 2) * (y + 1) * (y - 2) / 4;
+
+                    //b[4] = x * (x - 1) * (x - 2) * (y - 1) * (y - 2) * (y + 1) / (-12);
+                    //b[1] = y * (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y - 2) / (-12);
+                    //b[8] = x * y * (x - 1) * (x - 2) * (y + 1) * (y - 2) / 12;
+                    //b[2] = x * y * (x + 1) * (x - 2) * (y - 1) * (y - 2) / 12;
+
+                    //b[7] = x * (x - 1) * (x + 1) * (y - 1) * (y - 2) * (y + 1) / 12;
+                    //b[13] = y * (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y + 1) / 12;
+                    //b[0] = x * y * (x - 1) * (x - 2) * (y - 1) * (y - 2) / 36;
+                    //b[11] = x * y * (x - 1) * (x + 1) * (y + 1) * (y - 2) / (-12);
+
+                    //double b1 = (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y - 2) * (y + 1) / 4;
+                    //double b2 = x * (x + 1) * (x - 2) * (y - 1) * (y - 2) * (y + 1) / (-4);
+                    //double b3 = y * (x - 1) * (x - 2) * (x + 1) * (y + 1) * (y - 2) / (-4);
+                    //double b4 = x * y * (x + 1) * (x - 2) * (y + 1) * (y - 2) / 4;
+
+                    //double b5 = x * (x - 1) * (x - 2) * (y - 1) * (y - 2) * (y + 1) / (-12);
+                    //double b6 = y * (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y - 2) / (-12);
+                    //double b7 = x * y * (x - 1) * (x - 2) * (y + 1) * (y - 2) / 12;
+                    //double b8 = x * y * (x + 1) * (x - 2) * (y - 1) * (y - 2) / 12;
+
+                    //double b9 = x * (x - 1) * (x + 1) * (y - 1) * (y - 2) * (y + 1) / 12;
+                    //double b10 = y * (x - 1) * (x - 2) * (x + 1) * (y - 1) * (y + 1) / 12;
+                    //double b11 = x * y * (x - 1) * (x - 2) * (y - 1) * (y - 2) / 36;
+                    //double b12 = x * y * (x - 1) * (x + 1) * (y + 1) * (y - 2) / (-12);
+
+                    //double b13 = x * y * (x + 1) * (x - 2) * (y - 1) * (y + 1) / (-12);
+                    //double b14 = x * y * (x - 1) * (x + 1) * (y - 1) * (y - 2) / (-36);
+                    //double b15 = x * y * (x - 1) * (x - 2) * (y - 1) * (y + 1) / (-36);
+                    //double b16 = x * y * (x - 1) * (x + 1) * (y - 1) * (y + 1) / 36;
+
+                    for (int n = 0; n < 16; n++)
+                    {
+                        R += b[n] * pixels[n].R;
+                        G += b[n] * pixels[n].G;
+                        B += b[n] * pixels[n].B;
+                    }
+                    
+                    if (R < 0)
+                    {
+                        R = 0;
+                    }
+                    else if (R > 255) 
+                    {
+                        R = 255;
+                    }
+
+                    if (G < 0)
+                    {
+                        G = 0;
+                    }
+                    else if (G > 255)
+                    {
+                        G = 255;
+                    }
+
+                    if (B < 0)
+                    {
+                        B = 0;
+                    }
+                    else if (B > 255)
+                    {
+                        B = 255;
+                    }
+
+                    imgRes.SetPixel(i, j, Color.FromArgb(255, Convert.ToInt32(Math.Round(R)), Convert.ToInt32(Math.Round(G)), Convert.ToInt32(Math.Round(B))));
+                }
+            }
+
+            string st = k++ + ".png";
+
+            imgRes.Save(st, ImageFormat.Png);
+            pictureBox3.Image = imgRes;
+        }
+
+        private void Button1_Click(object sender, EventArgs e)
+        {
+            coef = Convert.ToDouble(textBox1.Text);
+
+            MakeBilinear();
+            MakeBicubic();
+        }
+
+        private void OpenFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
